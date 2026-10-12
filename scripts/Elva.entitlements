@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The app is not sandboxed. Hardened runtime needs no exceptions: Elva only opens network
+	     sockets, uses Image Capture and writes files the user chooses. -->
+</dict>
+</plist>

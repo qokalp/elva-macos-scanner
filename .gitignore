@@ -1,0 +1,26 @@
+# Build output
+.build/
+build/
+DerivedData/
+.swiftpm/
+*.xcodeproj/
+*.dmg
+*.dmg.sha256
+
+# Private notes and research (not published)
+docs/
+
+# Signing material – never commit
+*.p12
+*.p8
+*.cer
+*.mobileprovision
+AuthKey_*.p8
+.env
+
+# macOS / editors
+.DS_Store
+*.swp
+.vscode/
+.idea/
+*.log
