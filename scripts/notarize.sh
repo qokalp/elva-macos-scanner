@@ -19,7 +19,7 @@ else
 fi
 
 echo "▸ Notarizing $FILE (this usually takes a few minutes)"
-xcrun notarytool submit "$FILE" "${AUTH[@]}" --wait --timeout 30m
+xcrun notarytool submit "$FILE" "${AUTH[@]}" --wait --timeout 3h
 
 case "$FILE" in
   *.zip) ;;   # zips can't be stapled; staple the .app inside instead (see release.sh)

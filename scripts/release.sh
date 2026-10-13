@@ -21,7 +21,8 @@ APP="build/Elva Scanner.app"
 # Notarize when signed with Developer ID and credentials are available: an API key (CI) or,
 # locally, the keychain profile created with `xcrun notarytool store-credentials`.
 CAN_NOTARIZE=no
-if codesign -dvv "$APP" 2>&1 | grep -q "Authority=Developer ID Application"; then
+SIGNATURE=$(codesign -dvv "$APP" 2>&1 || true)   # captured first: `| grep -q` + pipefail misfires
+if [[ "$SIGNATURE" == *"Authority=Developer ID Application"* ]]; then
   if [[ -n "${NOTARY_KEY_PATH:-}" || -z "${GITHUB_ACTIONS:-}" ]]; then CAN_NOTARIZE=yes; fi
 fi
 

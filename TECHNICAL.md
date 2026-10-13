@@ -198,6 +198,13 @@ Apps distributed outside the Mac App Store need a **Developer ID Application** c
 Without a Developer ID identity the script still produces a working, ad-hoc signed DMG and says so
 in the release notes.
 
+Notarization normally takes a few minutes, but the **first submissions from a new Developer ID can
+stay "In Progress" for hours** (Elva's first one took several hours). `notarize.sh` waits up to 3 h;
+if it still times out, the submission keeps running at Apple. Check it with
+`xcrun notarytool info <submission-id> --keychain-profile elva-notary`, and once it is *Accepted*
+run `xcrun stapler staple "build/Elva Scanner.app"` and continue with `scripts/make-dmg.sh` and
+`scripts/notarize.sh build/Elva-Scanner.dmg`.
+
 ### 6.3 GitHub Actions secrets (optional)
 
 To sign and notarize in CI, add these repository secrets (Settings → Secrets and variables → Actions):

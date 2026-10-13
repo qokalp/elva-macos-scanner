@@ -129,9 +129,8 @@ neither AirPrint scanning nor a current Mac driver.
 
 Make sure the printer is switched on and connected to the same Wi-Fi network as your Mac.
 
-**If macOS says it can't check the app for malicious software** (builds that aren't notarized by
-Apple yet): open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**
-next to Elva Scanner. You only need to do this once.
+The first time, macOS reminds you that the app was downloaded from the internet; click **Open**.
+Elva Scanner is signed and notarized by Apple, so no security settings need to be changed.
 
 ### Update
 
@@ -224,9 +223,9 @@ veya Brother tarayıcıya Elva destek ekleyemez.
 
 Yazıcının açık ve Mac'inizle aynı Wi-Fi ağına bağlı olduğundan emin olun.
 
-**macOS uygulamayı kötü amaçlı yazılım için denetleyemediğini söylerse** (Apple noter onayı henüz
-almamış sürümler): **Sistem Ayarları → Gizlilik ve Güvenlik**'i açın, aşağı kaydırıp Elva Scanner'ın
-yanındaki **Yine de Aç**'a tıklayın. Bunu yalnızca bir kez yapmanız yeterli.
+İlk açılışta macOS, uygulamanın internetten indirildiğini hatırlatır; **Aç**'a tıklayın.
+Elva Scanner Apple tarafından imzalanmış ve onaylanmıştır (notarized); güvenlik ayarlarını
+değiştirmeniz gerekmez.
 
 ### Güncelleme
 
