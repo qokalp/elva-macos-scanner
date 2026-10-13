@@ -25,6 +25,11 @@ to reach a scanner:
 | **Elva driver** | Canon PIXMA/MAXIFY network models whose Mac driver is no longer maintained (e.g. MG7150) | `PixmaKit`: Canon BJNP transport + PIXMA scan protocol, written from scratch in Swift |
 | **via macOS** | Anything Image Capture can see: AirPrint/eSCL scanners and devices with an installed ICA driver | `ICABackend` on top of `ImageCaptureCore` |
 
+**Connections:** network only (Wi-Fi/Ethernet). There is **no USB transport yet**: a printer connected
+to the Mac by USB is not usable through the Elva driver, and only through the macOS route if macOS itself
+has a driver for it. USB support is planned (same PIXMA command set over USB bulk endpoints via
+`IOUSBHost`; see the transport note in §3.3).
+
 Both routes feed the same pipeline: preview → area selection / auto-crop → scan → non-destructive
 corrections → save as document (PDF/TIFF) or photos (JPEG/HEIC/PNG/TIFF).
 
@@ -103,6 +108,10 @@ Scan sequence for protocol generations 3–5:
 5. `0xD920` start scan, then poll `0xDA20` status until calibration/warm-up is done.
 6. `0xD420` read image blocks (≤ 512 KiB) until the end-of-image flags `0x28` are set.
 7. `0xEF20` abort/finish session, XML `EndJob`, BJNP close.
+
+The command set is transport-independent: over USB the same commands go to the scanner's bulk
+OUT endpoint and replies come from bulk IN, without BJNP framing. PixmaKit currently only implements
+the BJNP transport.
 
 Geometry details:
 
@@ -285,7 +294,7 @@ When a user confirms a model works, add its token (e.g. `"MX920"`) to `PixmaMode
 Models not in the table get an experimental generic profile (A4, 1200 dpi, generation 5) unless they
 offer AirScan.
 
-Not supported: USB-only devices (the app has no USB transport), Canon models that use other SANE
+Not supported: USB connections of any model (no USB transport yet, see §1), Canon models that use other SANE
 sub-drivers (`mp810`, `mp750`, `mp730`, imageCLASS/i-SENSYS), PIXMA document feeders (flatbed only),
 48-bit scanning.
 

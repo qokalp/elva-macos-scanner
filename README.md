@@ -57,6 +57,10 @@ already supports, so you can use one simple app for everything.
 
 ### Supported scanners
 
+> **Connection:** Elva Scanner talks to the scanner over your network: **Wi-Fi or an Ethernet cable
+> to your router**. Connecting the scanner to the Mac with a **USB cable is not supported yet**
+> (planned for a future version).
+
 **Tested and working**
 
 | Scanner | Connection |
@@ -127,7 +131,8 @@ neither AirPrint scanning nor a current Mac driver.
 5. When macOS asks whether Elva Scanner may *find devices on your local network*, click **Allow**.
    Without this the app can't see your scanner.
 
-Make sure the printer is switched on and connected to the same Wi-Fi network as your Mac.
+Make sure the printer is switched on and connected to the same network as your Mac (Wi-Fi or
+Ethernet). A USB cable connection is not supported yet.
 
 The first time, macOS reminds you that the app was downloaded from the internet; click **Open**.
 Elva Scanner is signed and notarized by Apple, so no security settings need to be changed.
@@ -190,6 +195,10 @@ böylece her şey için tek ve sade bir uygulama kullanırsınız.
 
 ### Desteklenen tarayıcılar
 
+> **Bağlantı:** Elva Scanner tarayıcıyla ağ üzerinden konuşur: **Wi-Fi ya da modeme bağlı bir
+> Ethernet kablosu**. Tarayıcıyı Mac'e **USB kablosuyla bağlamak henüz desteklenmiyor**
+> (ilerideki bir sürüm için planlanıyor).
+
 **Test edildi, çalışıyor**
 
 | Tarayıcı | Bağlantı |
@@ -221,7 +230,8 @@ veya Brother tarayıcıya Elva destek ekleyemez.
 5. macOS, Elva Scanner'ın *yerel ağdaki aygıtları bulmasına* izin verip vermeyeceğinizi sorduğunda
    **İzin Ver**'e tıklayın. Bu izin olmadan uygulama tarayıcınızı göremez.
 
-Yazıcının açık ve Mac'inizle aynı Wi-Fi ağına bağlı olduğundan emin olun.
+Yazıcının açık ve Mac'inizle aynı ağa (Wi-Fi veya Ethernet) bağlı olduğundan emin olun. USB kablosuyla
+bağlantı henüz desteklenmiyor.
 
 İlk açılışta macOS, uygulamanın internetten indirildiğini hatırlatır; **Aç**'a tıklayın.
 Elva Scanner Apple tarafından imzalanmış ve onaylanmıştır (notarized); güvenlik ayarlarını
