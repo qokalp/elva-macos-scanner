@@ -1,8 +1,8 @@
 name: Release
 
 # Push a tag like v1.2.0 (or run manually) to build, sign, notarize and publish Elva-Scanner.dmg.
-# Signing/notarization only happen when the secrets described in TECHNICAL.md §6.3 exist;
-# otherwise an ad-hoc signed DMG is published.
+# The GitHub release is only created/updated when the signing secrets described in TECHNICAL.md
+# §6.3 exist; otherwise the (ad-hoc signed) DMG is only kept as a workflow artifact.
 on:
   push:
     tags: ['v*']
@@ -66,10 +66,26 @@ jobs:
           echo "NOTARY_KEY_ID=${{ secrets.NOTARY_KEY_ID }}" >> "$GITHUB_ENV"
           echo "NOTARY_ISSUER_ID=${{ secrets.NOTARY_ISSUER_ID }}" >> "$GITHUB_ENV"
 
+      # Publish only signed builds. Without the signing secrets the DMG is kept as a workflow
+      # artifact instead, so a notarized DMG uploaded from a Mac (scripts/release.sh --publish)
+      # is never replaced by an unsigned one.
       - name: Build, sign, notarize and publish
+        if: env.HAS_CERT == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: scripts/release.sh --publish
+
+      - name: Build (unsigned, not published)
+        if: env.HAS_CERT != 'true'
+        run: scripts/release.sh
+
+      - name: Keep the DMG as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Elva-Scanner-${{ env.VERSION }}
+          path: |
+            build/Elva-Scanner.dmg
+            build/Elva-Scanner.dmg.sha256
 
       - name: Clean up signing material
         if: always()

@@ -218,7 +218,8 @@ To sign and notarize in CI, add these repository secrets (Settings → Secrets a
 | `NOTARY_ISSUER_ID` | the issuer ID (App Store Connect → Users and Access → Integrations) |
 
 Export the certificate from Keychain Access (*My Certificates* → right-click → Export → .p12).
-Without these secrets the workflow still builds and publishes an ad-hoc signed DMG.
+Without these secrets the workflow still builds the DMG but only keeps it as a workflow artifact;
+it never touches the GitHub release, so notarized DMGs published from a Mac are not overwritten.
 
 ## 7. Releases
 
@@ -235,8 +236,9 @@ scripts/release.sh --publish        # tests, builds, signs, notarizes, creates G
 ```
 
 **Automatic:** pushing a tag `v*` runs `.github/workflows/release.yml` on a GitHub macOS runner.
-The workflow takes the version from the tag, runs the tests, builds, signs and notarizes when the
-secrets exist, and creates or updates the GitHub release with `Elva-Scanner.dmg` and its SHA-256.
+The workflow takes the version from the tag, runs the tests and builds. When the signing secrets
+exist it also signs, notarizes and creates or updates the GitHub release with `Elva-Scanner.dmg` and
+its SHA-256; otherwise it only stores the DMG as a workflow artifact.
 `.github/workflows/ci.yml` builds and tests every push and pull request.
 
 ## 8. Updates
