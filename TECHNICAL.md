@@ -1,19 +1,16 @@
 # Elva Scanner – technical documentation
 
-This document is for developers and maintainers. End-user documentation is in [README.md](README.md).
+This document describes how Elva Scanner works and how to develop it. End-user documentation is in [README.md](README.md).
 
 - [1. Overview](#1-overview)
 - [2. Repository layout](#2-repository-layout)
 - [3. How scanning works](#3-how-scanning-works)
 - [4. The app](#4-the-app)
 - [5. Building](#5-building)
-- [6. Code signing and notarization](#6-code-signing-and-notarization)
-- [7. Releases (manual and GitHub Actions)](#7-releases)
-- [8. Updates](#8-updates)
-- [9. Testing](#9-testing)
-- [10. Adding or verifying scanner models](#10-adding-or-verifying-scanner-models)
-- [11. Troubleshooting](#11-troubleshooting)
-- [12. Credits and licensing](#12-credits-and-licensing)
+- [6. Testing](#6-testing)
+- [7. Adding or verifying scanner models](#7-adding-or-verifying-scanner-models)
+- [8. Troubleshooting](#8-troubleshooting)
+- [9. Credits and licensing](#9-credits-and-licensing)
 
 ## 1. Overview
 
@@ -37,7 +34,7 @@ corrections → save as document (PDF/TIFF) or photos (JPEG/HEIC/PNG/TIFF).
 
 ```
 Package.swift                 SwiftPM package (no Xcode project needed)
-VERSION                       app version used by the build scripts
+VERSION                       app version
 Sources/
   PixmaKit/                   protocol library (no UI)
     BJNPConnection.swift        BJNP over UDP/TCP 8612
@@ -55,8 +52,7 @@ Sources/
     Views/                      SwiftUI
     Resources/                  Info.plist, InfoPlist.strings (en, tr)
 Tests/PixmaKitTests/          unit tests
-scripts/                      build, DMG, notarization, release, icon and model-table generators
-.github/workflows/            CI (build + test) and release automation
+scripts/                      app build, icon and model-table generators
 assets/                       README images
 ```
 
@@ -152,7 +148,7 @@ Geometry details:
 | Corrections | `Processing/ImageProcessor.swift` | Core Image in gamma-encoded sRGB; negatives via per-channel levels (removes the orange mask) |
 | Saving | `Processing/Exporter.swift`, `Views/SaveSheet.swift` | PDF pages embedded as JPEG; OCR text layer (Vision) drawn invisibly; multi-page TIFF (LZW) |
 | Localization | `Model/Localization.swift` | in-app switchable English/Turkish; `L("English text")` lookups |
-| Updates | `Model/UpdateChecker.swift` | see [§8](#8-updates) |
+| Update check | `Model/UpdateChecker.swift` | reads the latest GitHub release tag, compares it with `CFBundleShortVersionString`; can be turned off in *Advanced* |
 
 Settings are stored as JSON in `UserDefaults` (`ScanSettings.v2`) with tolerant decoding, so new
 fields never reset existing preferences.
@@ -167,101 +163,16 @@ swift build                          # debug build of everything
 swift test                           # unit tests
 scripts/build-app.sh                 # universal "build/Elva Scanner.app"
 scripts/build-app.sh --install       # … and copy to /Applications
-scripts/make-dmg.sh                  # build/Elva-Scanner.dmg (+ .sha256)
 ```
 
-`build-app.sh` builds for `arm64` and `x86_64`, writes `VERSION`/build number into `Info.plist`,
-generates the icon (`scripts/make-icon.swift`) and signs: with the first **Developer ID Application**
-identity in the keychain (hardened runtime, timestamp) or ad-hoc when there is none. Override with
-`SIGN_IDENTITY`, `VERSION`, `BUILD_NUMBER`, `ARCHS`.
+`build-app.sh` builds for `arm64` and `x86_64`, writes `VERSION` and the build number into
+`Info.plist`, generates the icon (`scripts/make-icon.swift`) and code-signs the bundle. Overrides:
+`VERSION`, `BUILD_NUMBER`, `ARCHS`, `SIGN_IDENTITY` (`-` = ad-hoc).
 
-## 6. Code signing and notarization
+Note for local builds: macOS ties the Local Network permission to the code signature, so each
+ad-hoc rebuild asks for it again; while that prompt is open the app won't launch from Finder.
 
-Apps distributed outside the Mac App Store need a **Developer ID Application** certificate and
-**notarization**; otherwise Gatekeeper blocks the first launch (users then have to use *Open Anyway*).
-
-### 6.1 One-time setup (Apple Developer Program, account holder)
-
-1. **Create the certificate.** Xcode → Settings → Accounts → select the team → *Manage Certificates…*
-   → **+** → **Developer ID Application**. (Only the team's *Account Holder* can create it; it can also
-   be made at developer.apple.com → Certificates.) Check with:
-   ```sh
-   security find-identity -v -p codesigning | grep "Developer ID Application"
-   ```
-2. **Create notarization credentials.** Make an app-specific password at
-   [account.apple.com](https://account.apple.com) → Sign-In and Security → App-Specific Passwords, then:
-   ```sh
-   xcrun notarytool store-credentials elva-notary \
-     --apple-id "you@example.com" --team-id "TEAMID" --password "abcd-efgh-ijkl-mnop"
-   ```
-   This stores the credentials in the login keychain under the profile name `elva-notary`, which
-   `scripts/notarize.sh` uses by default (`NOTARY_PROFILE` overrides it).
-
-### 6.2 What `scripts/release.sh` does with them
-
-1. Signs `elvascan` and the app with `--options runtime --timestamp` and `scripts/Elva.entitlements`
-   (empty: the app is not sandboxed and needs no hardened-runtime exceptions).
-2. Zips the app, submits it with `notarytool --wait`, staples the ticket to the app.
-3. Builds the DMG, signs it, notarizes it, staples it, and checks it with `spctl`.
-
-Without a Developer ID identity the script still produces a working, ad-hoc signed DMG and says so
-in the release notes.
-
-Notarization normally takes a few minutes, but the **first submissions from a new Developer ID can
-stay "In Progress" for hours** (Elva's first one took several hours). `notarize.sh` waits up to 3 h;
-if it still times out, the submission keeps running at Apple. Check it with
-`xcrun notarytool info <submission-id> --keychain-profile elva-notary`, and once it is *Accepted*
-run `xcrun stapler staple "build/Elva Scanner.app"` and continue with `scripts/make-dmg.sh` and
-`scripts/notarize.sh build/Elva-Scanner.dmg`.
-
-### 6.3 GitHub Actions secrets (optional)
-
-To sign and notarize in CI, add these repository secrets (Settings → Secrets and variables → Actions):
-
-| Secret | Content |
-|---|---|
-| `MACOS_CERTIFICATE_P12` | base64 of the exported Developer ID certificate + private key (`base64 -i cert.p12 \| pbcopy`) |
-| `MACOS_CERTIFICATE_PASSWORD` | the .p12 export password |
-| `NOTARY_KEY_P8` | base64 of an App Store Connect API key (`AuthKey_XXXX.p8`, role *Developer*) |
-| `NOTARY_KEY_ID` | the key ID |
-| `NOTARY_ISSUER_ID` | the issuer ID (App Store Connect → Users and Access → Integrations) |
-
-Export the certificate from Keychain Access (*My Certificates* → right-click → Export → .p12).
-Without these secrets the workflow still builds the DMG but only keeps it as a workflow artifact;
-it never touches the GitHub release, so notarized DMGs published from a Mac are not overwritten.
-
-## 7. Releases
-
-The download button in the README points to
-`https://github.com/qokalp/elva-macos-scanner/releases/latest/download/Elva-Scanner.dmg`, so **every
-release must upload an asset named exactly `Elva-Scanner.dmg`** (the scripts do).
-
-**Manual (recommended while CI has no signing secrets):**
-
-```sh
-echo "1.0.1" > VERSION
-git commit -am "Release 1.0.1" && git tag v1.0.1 && git push --follow-tags
-scripts/release.sh --publish        # tests, builds, signs, notarizes, creates GitHub release v1.0.1
-```
-
-**Automatic:** pushing a tag `v*` runs `.github/workflows/release.yml` on a GitHub macOS runner.
-The workflow takes the version from the tag, runs the tests and builds. When the signing secrets
-exist it also signs, notarizes and creates or updates the GitHub release with `Elva-Scanner.dmg` and
-its SHA-256; otherwise it only stores the DMG as a workflow artifact.
-`.github/workflows/ci.yml` builds and tests every push and pull request.
-
-## 8. Updates
-
-Updates are deliberately simple: users download the new DMG and replace the app; settings live in
-`UserDefaults` (`com.qokalp.ElvaScanner`) and survive.
-
-`UpdateChecker` asks `api.github.com/repos/qokalp/elva-macos-scanner/releases/latest` at most once a
-day (and from *Elva Scanner → Check for Updates…*), compares the tag (`v1.2.3`) with
-`CFBundleShortVersionString`, and shows an alert with a download link when a newer version exists.
-It can be turned off in *Advanced*. No other data is sent. (A Sparkle-based in-place updater could
-be added later; it would need an EdDSA signing key and an appcast.)
-
-## 9. Testing
+## 6. Testing
 
 ```sh
 swift test                                              # protocol, geometry, model table, deinterleave
@@ -280,7 +191,7 @@ Hardware verification status: Canon PIXMA MG7150 (firmware 4.060) over Wi-Fi at 
 and gray, offset crops, back-to-back scans; Image Capture route through an AirScan bridge for the
 same printer. No HP/Brother/Epson hardware has been tested.
 
-## 10. Adding or verifying scanner models
+## 7. Adding or verifying scanner models
 
 `Sources/PixmaKit/ModelTable.swift` is generated from SANE's `pixma_mp150.c` device table (model names,
 USB product IDs, resolution limits, glass sizes; only protocol generations 3–5):
@@ -298,7 +209,7 @@ Not supported: USB connections of any model (no USB transport yet, see §1), Can
 sub-drivers (`mp810`, `mp750`, `mp730`, imageCLASS/i-SENSYS), PIXMA document feeders (flatbed only),
 48-bit scanning.
 
-## 11. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
@@ -306,12 +217,11 @@ sub-drivers (`mp810`, `mp750`, `mp730`, imageCLASS/i-SENSYS), PIXMA document fee
 | "Reserved by another job or app" | Another program (Canon IJ Scan Utility, VueScan, an AirScan bridge) holds the BJNP session. Close it or wait. |
 | Same printer listed twice | It is reachable natively and via AirPrint; both work. "Elva driver" offers more options. |
 | Image Capture scanner never starts | Check that it works in Apple's Image Capture app; the ICA route has 30 s time-outs and reports an error instead of hanging. |
-| Gatekeeper blocks the app | The build isn't notarized; see §6 or use *Open Anyway*. |
 
 Logs: run the binary from Terminal (`"/Applications/Elva Scanner.app/Contents/MacOS/ElvaScanner"`) or use
 `elvascan … -v` for protocol traces.
 
-## 12. Credits and licensing
+## 9. Credits and licensing
 
 Elva Scanner is MIT-licensed (see [LICENSE](LICENSE)). The PIXMA/BJNP protocol knowledge comes from
 the [SANE project](https://gitlab.com/sane-project/backends)'s `pixma` backend (GPL), which documents
