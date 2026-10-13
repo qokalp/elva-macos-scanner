@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Packs "build/Elva Scanner.app" into build/Elva-Scanner.dmg (drag-to-Applications layout).
+# Packs "build/Elva Scanner.app" into build/Elva-Scanner.dmg with a designed window:
+# background with a drag arrow, app on the left, Applications on the right.
 # The file name stays the same for every release so that
 # https://github.com/qokalp/elva-macos-scanner/releases/latest/download/Elva-Scanner.dmg always works.
 set -euo pipefail
@@ -7,16 +8,25 @@ cd "$(dirname "$0")/.."
 
 APP="build/Elva Scanner.app"
 DMG="build/Elva-Scanner.dmg"
-STAGE=build/dmg-stage
 [[ -d "$APP" ]] || { echo "Run scripts/build-app.sh first"; exit 1; }
 
-rm -rf "$STAGE" "$DMG"
-mkdir -p "$STAGE"
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
+rm -f "$DMG"
 
-hdiutil create -volname "Elva Scanner" -srcfolder "$STAGE" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$DMG" >/dev/null
-rm -rf "$STAGE"
+# dmgbuild writes the Finder window layout (background, icon positions, window size) into the image
+# without having to script Finder, so the result is the same locally and on CI.
+VENV=build/.venv
+if [[ ! -x $VENV/bin/dmgbuild ]]; then
+  python3 -m venv $VENV
+  $VENV/bin/pip install --quiet dmgbuild
+fi
+
+BG=build/dmg-background
+swift scripts/make-dmg-background.swift $BG
+tiffutil -cathidpicheck $BG/background.png $BG/background@2x.png -out $BG/background.tiff >/dev/null
+
+$VENV/bin/dmgbuild -s scripts/dmg-settings.py \
+  -D app="$APP" -D background="$BG/background.tiff" -D icon=build/AppIcon.icns \
+  "Elva Scanner" "$DMG"
 
 IDENTITY=$(codesign -dvv "$APP" 2>&1 | sed -n 's/^Authority=\(Developer ID Application: .*\)$/\1/p' | head -1)
 if [[ -n "$IDENTITY" ]]; then
